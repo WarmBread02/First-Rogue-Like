@@ -1,82 +1,64 @@
-import copy
-from inspect import trace
+#!/usr/bin/env python3
 import traceback
 
 import tcod
 
 import color
-from engine import Engine
-import entity_factories
+import exceptions
+import setup_game
+import input_handlers
 
-from procgen import generate_dungeon
+
+def save_game(handler: input_handlers.BaseEventHandler, filename: str) -> None:
+    """If the current event handler has an active Engine then save it."""
+    if isinstance(handler, input_handlers.EventHandler):
+        handler.engine.save_as(filename)
+        print("Game saved.")
+
 
 def main() -> None:
     screen_width = 80
     screen_height = 50
-    map_width = 80
-    map_height = 43
-    
-    room_max_size = 10
-    room_min_size = 6
-    max_rooms = 30
-    
-    max_monsters_per_room = 2
-    max_items_per_room = 2
 
-    #telling tcod what font to use
     tileset = tcod.tileset.load_tilesheet(
         "dejavu10x10_gs_tc.png", 32, 8, tcod.tileset.CHARMAP_TCOD
     )
 
-    #use it to receive events and process them.
-    player = copy.deepcopy(entity_factories.player)
-    
-    #this sets the player coords and an npc coord
-    engine = Engine(player=player)
-    
-    
-    engine.game_map = generate_dungeon(
-        max_rooms=max_rooms,
-        room_min_size=room_min_size,
-        room_max_size=room_max_size,
-        map_width=map_width,
-        map_height=map_height,
-        max_monsters_per_room=max_monsters_per_room,
-        max_items_per_room=max_items_per_room,
-        engine=engine,
-    )
-    
-    engine.update_fov()
-    
-    engine.message_log.add_message(
-        "The First Dungeon", color.welcome_text
-    )
+    handler: input_handlers.BaseEventHandler = setup_game.MainMenu()
 
-    #creating the actual screen
     with tcod.context.new_terminal(
         screen_width,
         screen_height,
         tileset=tileset,
-        title="My first Roguelike game",
+        title="First Roguelike!",
         vsync=True,
     ) as context:
-        #creates the console, which is what is being drawn to
         root_console = tcod.Console(screen_width, screen_height, order="F")
-        while True:
-            #printing to the console
-            root_console.clear()
-            engine.event_handler.on_render(console=root_console)
-            context.present(root_console)
+        try:
+            while True:
+                root_console.clear()
+                handler.on_render(console=root_console)
+                context.present(root_console)
 
-            try:
-                for event in tcod.event.wait():
-                    context.convert_event(event)
-                    engine.event_handler.handle_events(event)
-            except Exception: #Handle exceptions in game.
-                traceback.print_exc() #print error to stderr
-                #Then print the error to the message log.
-                engine.message_log.add_message(traceback.format_exc(), color.error)
-            
+                try:
+                    for event in tcod.event.wait():
+                        context.convert_event(event)
+                        handler = handler.handle_events(event)
+                except Exception:  # Handle exceptions in game.
+                    traceback.print_exc()  # Print error to stderr.
+                    # Then print the error to the message log.
+                    if isinstance(handler, input_handlers.EventHandler):
+                        handler.engine.message_log.add_message(
+                            traceback.format_exc(), color.error
+                        )
+        except exceptions.QuitWithoutSaving:
+            raise
+        except SystemExit:  # Save and quit.
+            save_game(handler, "savegame.sav")
+            raise
+        except BaseException:  # Save on any other unexpected exception.
+            save_game(handler, "savegame.sav")
+            raise
 
 
 if __name__ == "__main__":

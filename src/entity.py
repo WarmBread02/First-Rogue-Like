@@ -12,8 +12,9 @@ if TYPE_CHECKING:
     from components.fighter import Fighter
     from components.inventory import Inventory
     from game_map import GameMap
-    
+
 T = TypeVar("T", bound="Entity")
+
 
 class Entity:
     """
@@ -41,14 +42,14 @@ class Entity:
         self.blocks_movement = blocks_movement
         self.render_order = render_order
         if parent:
-            # If gamemap isn't provided now then it will be set later.
+            # If parent isn't provided now then it will be set later.
             self.parent = parent
             parent.entities.add(self)
 
     @property
     def gamemap(self) -> GameMap:
         return self.parent.gamemap
-        
+
     def spawn(self: T, gamemap: GameMap, x: int, y: int) -> T:
         """Spawn a copy of this instance at the given location."""
         clone = copy.deepcopy(self)
@@ -57,8 +58,9 @@ class Entity:
         clone.parent = gamemap
         gamemap.entities.add(clone)
         return clone
+
     def place(self, x: int, y: int, gamemap: Optional[GameMap] = None) -> None:
-        """Place this entity at a new location.  Handles moving across GameMaps."""
+        """Place this entitiy at a new location.  Handles moving across GameMaps."""
         self.x = x
         self.y = y
         if gamemap:
@@ -78,7 +80,8 @@ class Entity:
         # Move the entity by a given amount
         self.x += dx
         self.y += dy
-        
+
+
 class Actor(Entity):
     def __init__(
         self,
@@ -98,7 +101,7 @@ class Actor(Entity):
             char=char,
             color=color,
             name=name,
-            blocks_movement=True, #all actors will block movement
+            blocks_movement=True,
             render_order=RenderOrder.ACTOR,
         )
 
@@ -114,6 +117,7 @@ class Actor(Entity):
     def is_alive(self) -> bool:
         """Returns True as long as this actor can perform actions."""
         return bool(self.ai)
+
 
 class Item(Entity):
     def __init__(

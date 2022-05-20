@@ -11,9 +11,8 @@ import tile_types
 if TYPE_CHECKING:
     from engine import Engine
     from entity import Entity
-    
-    
-    
+
+
 class GameMap:
     def __init__(
         self, engine: Engine, width: int, height: int, entities: Iterable[Entity] = ()
@@ -21,7 +20,6 @@ class GameMap:
         self.engine = engine
         self.width, self.height = width, height
         self.entities = set(entities)
-        #creating an array of tiles of type tile_types.floor
         self.tiles = np.full((width, height), fill_value=tile_types.wall, order="F")
 
         self.visible = np.full(
@@ -30,11 +28,10 @@ class GameMap:
         self.explored = np.full(
             (width, height), fill_value=False, order="F"
         )  # Tiles the player has seen before
-        
+
     @property
     def gamemap(self) -> GameMap:
         return self
-
 
     @property
     def actors(self) -> Iterator[Actor]:
@@ -44,13 +41,11 @@ class GameMap:
             for entity in self.entities
             if isinstance(entity, Actor) and entity.is_alive
         )
-    
-    
+
     @property
     def items(self) -> Iterator[Item]:
         yield from (entity for entity in self.entities if isinstance(entity, Item))
 
-    
     def get_blocking_entity_at_location(
         self, location_x: int, location_y: int,
     ) -> Optional[Entity]:
@@ -63,16 +58,16 @@ class GameMap:
                 return entity
 
         return None
-    
+
     def get_actor_at_location(self, x: int, y: int) -> Optional[Actor]:
         for actor in self.actors:
             if actor.x == x and actor.y == y:
                 return actor
 
         return None
-    
+
     def in_bounds(self, x: int, y: int) -> bool:
-        #Return True if x and y are inside of the bounds of this map
+        """Return True if x and y are inside of the bounds of this map."""
         return 0 <= x < self.width and 0 <= y < self.height
 
     def render(self, console: Console) -> None:
@@ -88,13 +83,12 @@ class GameMap:
             choicelist=[self.tiles["light"], self.tiles["dark"]],
             default=tile_types.SHROUD,
         )
-        
+
         entities_sorted_for_rendering = sorted(
             self.entities, key=lambda x: x.render_order.value
         )
-        
+
         for entity in entities_sorted_for_rendering:
-            # Only print entities that are in the FOV
             if self.visible[entity.x, entity.y]:
                 console.print(
                     x=entity.x, y=entity.y, string=entity.char, fg=entity.color
